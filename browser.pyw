@@ -1,8 +1,9 @@
 import sys
-from PyQt5.QtCore import QUrl, Qt, QMimeData
-from PyQt5.QtGui import QIcon, QDrag
+from PyQt5.QtCore import QUrl, Qt
+from PyQt5.QtGui import QIcon, QMouseEvent
 from PyQt5.QtWidgets import *
 from PyQt5.QtWebEngineWidgets import QWebEngineView
+
 
 class Tab(QTabBar):
     def __init__(self, parent=None):
@@ -21,6 +22,31 @@ class Tab(QTabBar):
             label = tab_data[0]
             self.parent().add_new_tab(url, label)
             event.acceptProposedAction()
+
+
+class DevTools(QDialog):
+    def __init__(self, parent=None):
+        super(DevTools, self).__init__(parent)
+        self.setWindowTitle("Developer Tools")
+        self.setGeometry(150, 150, 400, 300)
+
+        layout = QVBoxLayout(self)
+
+        # Console area
+        self.console_output = QTextEdit()
+        self.console_output.setReadOnly(True)
+        layout.addWidget(self.console_output)
+
+        # Add a simple "Clear Console" button
+        clear_button = QPushButton("Clear Console", self)
+        clear_button.clicked.connect(self.clear_console)
+        layout.addWidget(clear_button)
+
+    def clear_console(self):
+        self.console_output.clear()
+
+    def log(self, message):
+        self.console_output.append(message)
 
 
 class Window(QMainWindow):
@@ -92,6 +118,13 @@ class Window(QMainWindow):
 
         # Apply styles
         self.apply_styles()
+
+        # Create the developer tools dialog
+        self.dev_tools = DevTools(self)
+
+        # Add a right-click context menu for the tab widget
+        self.tab_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tab_widget.customContextMenuRequested.connect(self.show_right_click_menu)
 
     def apply_styles(self):
         # Set the overall style for the window
@@ -189,6 +222,17 @@ class Window(QMainWindow):
         if current_browser:
             self.URLBar.setText(current_browser.url().toString())
             self.URLBar.setCursorPosition(0)
+
+    def show_right_click_menu(self, pos):
+        # Create a custom menu
+        context_menu = QMenu(self)
+        open_dev_tools_action = QAction("Open Dev Tools", self)
+        open_dev_tools_action.triggered.connect(self.open_dev_tools)
+        context_menu.addAction(open_dev_tools_action)
+        context_menu.exec_(self.tab_widget.mapToGlobal(pos))
+
+    def open_dev_tools(self):
+        self.dev_tools.show()
 
 app = QApplication(sys.argv)
 app.setApplicationName('CodeForge')
